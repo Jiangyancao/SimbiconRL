@@ -80,10 +80,14 @@ class FooEnv6(env_base.FooEnvBase):
 
         ##current State
         self.currentState = [0,0,0,0]
+
+        ##남은 회전 방향
+        self.currentLeftAngle = 0
+
         print(self.targetAngle)
 
     def get_state(self):
-        return np.concatenate([self.sim.skeletons[1].q[0:3],self.sim.skeletons[1].q[6:9],self.sim.skeletons[1].q[14:20],self.sim.skeletons[1].q[26:32],self.sim.skeletons[1].dq[0:3],self.sim.skeletons[1].dq[6:9],self.sim.skeletons[1].dq[14:20],self.sim.skeletons[1].dq[26:32],self.currentState,[self.desiredSpeed,self.leftAngle]])
+        return np.concatenate([self.sim.skeletons[1].q[0:3],self.sim.skeletons[1].q[6:9],self.sim.skeletons[1].q[14:20],self.sim.skeletons[1].q[26:32],self.sim.skeletons[1].dq[0:3],self.sim.skeletons[1].dq[6:9],self.sim.skeletons[1].dq[14:20],self.sim.skeletons[1].dq[26:32],self.currentState,[self.desiredSpeed,self.currentLeftAngle]])
 
     #curriculum Pd value
     def setvalue(self,value):
@@ -135,6 +139,8 @@ class FooEnv6(env_base.FooEnvBase):
         ##current State
         self.currentState = [0,0,0,0]
 
+        ##남은 회전 방향
+        self.currentLeftAngle = 0
 
         return self.get_state()
         #self.Rcontact_time_before = 0
@@ -147,7 +153,6 @@ class FooEnv6(env_base.FooEnvBase):
     def increaseSpeed(self):
         if self.targetspeed < self.targetMaxspeed:
             self.targetspeed += 0.025
-
 
     def clip_Scaling_Actiond10(self, action, stateName):
         action = np.clip(action, -1, 1)
@@ -246,15 +251,24 @@ class FooEnv6(env_base.FooEnvBase):
 
         alive_bonus = 20
 
-        #방향 맞춤
+        #방향 맞춤(전체 각도)
         self.currentFrameXAxis = self.getCOMFrameXAxis()
+        """
         for i in range(3):
             self.currentFrameXAxis[i] = (self.currentFrameXAxis[i] + self.ppreviousforward[i])
+        """
         self.leftAngle = self._calAngleBetweenVectors(self.currentFrameXAxis, self.targetFrameXAxis)
         if np.cross(self.currentFrameXAxis, self.targetFrameXAxis)[1] < 0:
             self.leftAngle = -self.leftAngle
         self.ppreviousforward = self.previousforward
         self.previousforward = self.getCOMFrameXAxis()
+        
+        #방향 맞춤(10도)
+        ##남은 회전 방향
+        currentTargetFrameXAxis = self.rotateYAxis(self.currentLeftAngle, self.previousforward)
+        self.currentLeftAngle = self._calAngleBetweenVectors(self.currentFrameXAxis, currentTargetFrameXAxis)
+        self.currentLeftAngle = -self.currentLeftAngle if self.leftAngle < 0 else self.currentLeftAngle
+       
 
 
         #발의 위치로 early Termination (비활성)
@@ -321,8 +335,9 @@ class FooEnv6(env_base.FooEnvBase):
         
         ##다리 질질끌고 통통 튀면서 걷고 한쪽 다리 거의 못들어올리고 방향전환은 가능하나 결과 별로 좋지않다.
         ##reward = alive_bonus - self.tausums/8000 - 2*walkPenalty - 2*np.abs(self.leftAngle) - 1.4*np.abs(DisV - 1) - 3*torsoMSE - 4*FootstepDiff
-        reward = (alive_bonus - self.tausums/8000 - 5*walkPenalty - 5*np.abs(self.leftAngle) - 1.4*np.abs(DisV - 1) - 3*torsoMSE - 2*FootstepDiff)*(n_frames/SIMULATION_STEP_PER_SEC)
-
+        ##reward = (alive_bonus - self.tausums/8000 - 5*walkPenalty - 5*np.abs(self.leftAngle) - 1.4*np.abs(DisV - 1) - 3*torsoMSE - 2*FootstepDiff)*(n_frames/SIMULATION_STEP_PER_SEC) 
+        reward = (alive_bonus - self.tausums/8000 - 5*walkPenalty - 5*np.abs(self.currentLeftAngle) - 1.4*np.abs(DisV - 1) - 3*torsoMSE - 2*FootstepDiff)*(n_frames/SIMULATION_STEP_PER_SEC)
+        
 
         self.step_counter += n_frames
         self.change_step += n_frames
@@ -372,6 +387,12 @@ class FooEnv6(env_base.FooEnvBase):
         self.currentState = [0,0,0,0]
         self.currentState[int(self.controller.mCurrentStateMachine.mCurrentState.mName)] = 1
 
+        ##남은 각도 10도로 제한하는 코드
+        if np.abs(self.leftAngle) > 10:
+            ##남은 각도 10도
+            self.currentLeftAngle = -10 if x < 0 else 10
+        else:
+            self.currentLeftAngle = self.leftAngle
 
         thisState = self.get_state()
 
