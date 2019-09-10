@@ -30,7 +30,7 @@ class FooEnv6(env_base.FooEnvBase):
         super().init_sim(cDirection,render)
         #observation_spaces = np.concatenate([self.sim.skeletons[1].q[1:3],self.sim.skeletons[1].q[6:9],self.sim.skeletons[1].q[14:20],self.sim.skeletons[1].q[26:32],self.sim.skeletons[1].dq[0:3],self.sim.skeletons[1].dq[6:9],self.sim.skeletons[1].dq[14:20],self.sim.skeletons[1].dq[26:32],[int(self.controller.mCurrentStateMachine.mCurrentState.mName),0,0]])
 
-        observation_spaces = np.concatenate([self.sim.skeletons[1].q[0:3],self.sim.skeletons[1].q[6:9],self.sim.skeletons[1].q[14:20],self.sim.skeletons[1].q[26:32],self.sim.skeletons[1].dq[0:3],self.sim.skeletons[1].dq[6:9],self.sim.skeletons[1].dq[14:20],self.sim.skeletons[1].dq[26:32],[0,1,0,0],[0,0]])
+        observation_spaces = np.concatenate([self.sim.skeletons[1].q[0:3],self.sim.skeletons[1].q[6:9],self.sim.skeletons[1].q[14:20],self.sim.skeletons[1].q[26:32],self.sim.skeletons[1].dq[0:3],self.sim.skeletons[1].dq[6:9],self.sim.skeletons[1].dq[14:20],self.sim.skeletons[1].dq[26:32],[1,0,0,0],[0,0]])
 
 
 
@@ -79,7 +79,7 @@ class FooEnv6(env_base.FooEnvBase):
         self.change_step = 0
 
         ##current State
-        self.currentState = [0,0,0,0]
+        self.currentState = [1,0,0,0]
 
         ##남은 회전 방향
         self.currentLeftAngle = 0
@@ -137,7 +137,7 @@ class FooEnv6(env_base.FooEnvBase):
         self.change_step = 0
 
         ##current State
-        self.currentState = [0,0,0,0]
+        self.currentState = [1,0,0,0]
 
         ##남은 회전 방향
         self.currentLeftAngle = 0
@@ -186,7 +186,7 @@ class FooEnv6(env_base.FooEnvBase):
         action[8] = ((action[8]-1)/2)*math.radians(30.0)
         action[9] = (action[9])*math.radians(30.0) 
         ##contact offset
-        #action[10] = action[10]*150
+        action[10] = action[10]*150
 
         ##root
         #action[14] = (action[14])*np.pi/4
@@ -413,10 +413,10 @@ class FooEnv6(env_base.FooEnvBase):
         self.tausums = 0
         state_step = 0
         state_step_after_contact = 0
-        #offset = np.round(action[10])
+        offset = np.round(action[10])
 
         #offset = np.round((np.random.rand()-0.5)*20)
-        offset = 0
+        #offset = 0
         CFSM = self.controller.mCurrentStateMachine
 
         #스윙힙이 최고 높이에 도달했을때
